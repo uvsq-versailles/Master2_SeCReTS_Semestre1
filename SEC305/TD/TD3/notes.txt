@@ -1,0 +1,28 @@
+# hostname client1.secrets.com
+# vi /etc/hostname
+
+# /etc/systemd/networkd/enp1s0.network
+# systemctl restart systemd-networkd
+
+$ ip route show
+$ ip addr list dev enp1s0
+
+# sysctl -w net.ipv4.ip_forward=1
+# /etc/sysctl.conf
+# ip route add 10.1.2.0/24 via 10.1.0.2
+$ ip route get 10.1.2.2
+
+# iptables -nvL
+$ man iptables
+$ /usr/share/doc/
+$ dpkg -L iptables
+$ dpkg -l
+
+# iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+# iptables -A INPUT -i lo -j ACCEPT
+# iptables -P INPUT DROP
+
+# iptables -t nat -A POSTROUTING -s 10.1.1.2 -d 10.1.0.2 -j SNAT --to 10.1.0.1:80
+# iptables -t nat -A POSTROUTING -s 10.1.1.2 -d 10.1.0.2 -j MASQUERADE
+# iptables -t nat -A POSTROUTING -s 10.1.1.2 -d 10.1.0.2 -j SNAT --to 10.1.0.1
+

@@ -1,0 +1,12 @@
+# hostname client1.secrets.com
+vi/etc/hostname
+
+# /etc/systemd/network/enp0s3.network
+# systemctl restart systemd-networkd
+
+$ ip route show
+$ ip addr list dev enp0s3
+
+sysctl1
+
+........... voir photo
