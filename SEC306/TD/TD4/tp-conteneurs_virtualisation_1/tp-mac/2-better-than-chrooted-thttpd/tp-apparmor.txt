@@ -1,0 +1,197 @@
+    Master SeCReTS 2019-2020
+
+          TP AppArmor
+
+=================================
+
+L'objectif de ce TP est d'observer comment on peut confiner un programme
+à l'aide de AppArmor, et de comparer à d'autres mécanismes avec des
+objectifs similaires, en particulier chroot.
+
+
+0. Consignes
+------------
+
+Les lignes commençant par '#' contiennent des commandes à lancer en root.
+
+
+Nous allons travailler avec la version de thttpd installée dans une
+arborescence spécifique comme pour l'utilisation de chroot. Par contre,
+nous n'utiliserons pas la commande chroot, uniquement le confinement
+avec AppArmor.
+Dans le sujet, on suppose que thttpd est déployé dans un dossier nommé
+/chroot/thttpd.
+
+Installation de thttpd
+----------------------
+
+% tar xzf thttpd-2.27.tar.gz
+% ./configure
+% make
+% sudo make install DESTDIR=/chroot/thttpd
+
+A partir d'ici, soit vous récupérez l'installation de thttpd faite dans
+le tp sur chroot, soit vous pouvez récupérer une archive avec
+l'arborescence déjà constituée.
+
+1. Installation de AppArmor
+---------------------------
+
+b) Sous Ubuntu
+
+AppArmor est déjà installé et activé. Il peut être nécessaire
+d'installer les outils d'administration complémentaires :
+# apt install apparmor-utils auditd
+
+Passez à la partie 2.
+
+b) Sous Debian
+
+Pour le système Debian, les instructions sont tirées de
+https://wiki.debian.org/AppArmor/HowTo
+
+Installez les packages nécessaires au fonctionnement de AppArmor :
+# aptitude -R install apparmor apparmor-profiles apparmor-utils
+
+Installez également le daemon auditd qui pourra collecter les logs de
+AppArmor
+# aptitude -R install auditd
+
+Modifiez la ligne correspondante dans le fichier /etc/default/grub :
+---------
+...
+GRUB_CMDLINE_LINUX=" apparmor=1 security=apparmor"
+...
+---------
+
+Mettez à jour grub :
+# update-grub
+
+Enfin, redémarrez Debian pour activer AppArmor.
+
+
+2. Confinement du serveur thttpd
+--------------------------------
+
+Vérifiez que le programme thttpd est bien installé et fonctionnel.
+# /chroot/thttpd/usr/local/sbin/thttpd
+# ps aux |grep thttpd
+# pgrep thttpd
+
+Et enfin, arrêtez-le :
+# pkill thttpd
+
+La ligne de commande à utiliser par la suite pour lancer le serveur
+thttpd sera la suivante (pensez à adapter le nom du répertoire) :
+# sudo /chroot/thttpd/usr/local/sbin/thttpd -u root -nor -d /chroot/thttpd/var/www -c 'index.sh' -l /chroot/thttpd/var/log/thttpd.log
+
+Créez dans votre répertoire utilisateur un nouveau fichier nommé
+apparmor.thttpd (c'est la façon standard de nommer un fichier
+contenant un profil AppArmor).
+
+Mettez le contenu suivant dans ce fichier :
+--------
+# Profil AppArmor pour le TP du master SeCReTS
+
+/**/thttpd flags=(complain) {
+
+}
+--------
+
+Chargez ce profil AppArmor (vide) dans le système avec la commande suivante :
+# apparmor_parser --add apparmor.thttpd
+
+Le profil est chargé en mode "complain" (toutes les actions sont autorisées et
+enregistrées). Vous pouvez le vérifier avec la commande aa-status.
+
+Relancez le serveur thttpd.
+Avec la commande suivante, vous allez afficher la liste des log consécutifs au
+lancement du serveur thttpd :
+# grep AVC /var/log/audit/audit.log
+
+Le fichier audit.log est en fait le journal du daemon auditd, il enregistre
+tous les événements relatifs à la sécurité niveau noyau.
+
+A partir d'ici, l'objectif est de compléter le profil AppArmor du
+serveur thttpd jusqu'à ce qu'il soit complet, et qu'on puisse le placer
+en mode "enforce". Vous devez donc ajouter des actions autorisées dans
+le fichier apparmor.thttpd. Le langage à utiliser est décrit sur
+la page suivante :
+http://wiki.apparmor.net/index.php/QuickProfileLanguage
+
+Par exemple, vous pouvez ajouter cette ligne pour l'accès au
+bibliothèques dynamiques :
+--------
+/chroot/thttpd/lib{,64}/lib*.so* mr,
+--------
+
+Vous pouvez vous inspirer des autres profils présents dans le dossier
+/etc/apparmor.d.
+
+Quand vous ajoutez des lignes au profil, vous devez le recharger avec cette
+commande :
+# apparmor_parser --replace apparmor.thttpd
+
+On utilise ici l'option --replace pour indiquer que l'on souhaite remplacer un
+profil déjà chargé.
+
+Laissez un terminal ouvert avec la commande suivante :
+# tail -f /var/log/audit/audit.log
+
+Lorsque vous lancez thttpd, de nouvelles lignes vont apparaître dans ce
+terminal. Une fois que vous aurez un profil complet, plus aucune ligne ne
+devrait apparaître.
+
+
+3) Génération automatique de profil
+-----------------------------------
+
+A partir d'ici, si vous avez des messages d'erreur concernant
+snap-confine, lancez la commande suivante :
+# apt purge snapd
+
+Un outil fournit par AppArmor vous permet de générer automatiquement un
+profil pour une nouvelle application. Voici la commande à lancer :
+# aa-genprof /chroot/thttpd/usr/local/sbin/thttpd
+
+Ensuite vous devrez démarrer le serveur thttpd, interagir avec, et enfin
+l'arrêter. Puis vous devez presser la touche 's' pour demander que
+aa-genprof scanne les journaux d'événements à la recherche des logs de
+AppArmor. Enfin pour chaque ligne trouvée, on vous demande si vous
+souhaitez ajouter la modification au profil.
+
+Le profil généré est automatiquement chargé, et le fichier correspondant
+est /etc/apparmor.d/usr.local.sbin.thttpd. Regardez le contenu de ce
+fichier.  Est-ce qu'il correspond à ce que vous avez défini manuellement
+? Pensez-vous qu'il est préférable d'avoir une génération automatique ou
+manuelle ?
+
+
+4) Adaptation au lancement de scripts CGI
+-----------------------------------------
+
+Reprenez le cas d'utilisation décrit dans le TP sur chroot, avec le
+script index.sh. Vous allez devoir adapter le profil AppArmor de thttpd
+pour qu'il puisse exécuter le script. (Reprenez la même démarche qu'en
+partie 2).
+
+Lorsque vous considérez que votre profil AppArmor est complet, passez-le
+en mode "enforce" avec la commande suivante :
+# aa-enforce /chroot/thttpd/usr/local/sbin/thttpd
+
+Testez le même genre d'attaques que vous aviez bloqué pendant le TP sur
+chroot. Les attaques sont-elles bloquées par AppArmor ?
+
+5) Conclusion
+-------------
+
+Dans ce TP, on a mis en évidence les possibilités de confinement
+offertes par AppArmor. Pouvez-vous comparer avec chroot ?
+
+Au final, on n'a pas besoin de copier tous les binaires et fichiers
+nécessaires à thttpd dans une nouvelle racine. Est-ce que c'est
+intéressant ? Est-ce que l'effort de configuration à fournir pour créer
+un profil AppArmor est plus ou moins important que celui à fournir pour
+constituer une cage ?
+
+

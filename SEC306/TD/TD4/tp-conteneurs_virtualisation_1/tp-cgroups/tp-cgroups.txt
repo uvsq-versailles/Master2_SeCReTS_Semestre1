@@ -1,0 +1,155 @@
+          Master SeCReTS 2019-2020
+
+          TP CGroups et Namespaces
+
+============================================
+
+L'objectif de ce TP est de réaliser quelques manipulations basiques des
+cgroups, à l'aide des commandes cg*.
+
+0. Consignes
+------------
+
+Les lignes commençant par '#' contiennent des commandes à lancer en
+root, et celle commençant par '%' en simple utilisateur.
+
+1. Vérification de l'environnement
+----------------------------------
+
+Vérifier la présence des commandes de manipulation des cgroups :
+% which cgcreate
+/usr/bin/cgcreate
+
+En cas d'erreur, installer le package manquant :
+# apt install cgroup-tools
+
+Vérifier la bonne activation des cgroups :
+% ls /sys/fs/cgroup
+blkio  cgmanager  cpu  cpuacct  cpu,cpuacct  cpuset [...]
+
+En cas d'erreur, c'est généralement signe que la distribution ne
+supporte pas les cgroups. Il est quand même possible de faire apparaître
+les cgroups avec la commande suivante :
+# mount -t cgroup cgroup /sys/fs/cgroup
+
+2. Création d'un nouveau "slice" pour l'utilisateur
+---------------------------------------------------
+
+Les cgroups sont généralement manipulés par l'utilisateur root. On peut
+l'observer avec les permissions sur les fichiers dans /sys/fs/cgroup.
+Mais il est possible de créer des cgroups à destination des
+utilisateurs.
+-> Créez un nouveau cgroup (aussi appelé slice) nommé "test" contrôlable
+par un utilisateur normal avec la commange cgcreate (indice : utilisez
+l'option -a). Ce groupe doit contrôler les unités "cpu", "cpuset" et
+"memory".
+
+Ensuite on doit normalement créer un sous-cgroup dans lequel
+l'utilisateur pourra effectivement placer des processus. Si vous avez
+appelé "test" le slice de la question précédente, appelez ce sous-slice
+"test/1", avec les mêmes unités que précédemment.
+-> Créez le slice "test/1".
+
+Enfin vous pouvez effacer ces nouveaux groupes avec la commande
+cgdelete, ou en faisant un rmdir sur le dossier correspondant dans
+l'arborescence /sys/fs/cgroup.
+
+3. Exécution de commandes dans le nouveau slice
+-----------------------------------------------
+
+a) Programme de test
+
+Les nouveaux programmes peuvent être placés dans un slice avec la
+commande cgexec. Pour disposer de commandes intéressantes à lancer pour
+tester les cgroups, nous allons installer un outil de benchmark cpu
+appelé "stress-ng".
+# apt install stress-ng
+
+Ensuite la commande de base à lancer dépend du nombre de CPUs sur votre
+machine.
+$ stress-ng --cpu <nb_cpu> -t <nb_secondes>
+
+Puis on ajoutera des options pour lancer des tests suivants le cgroup à
+utiliser.
+
+b) cpuset
+
+Observez la documentation (man) de cgexec pour voir comment lancer une
+commande dans votre nouveau cgroup. On lancera le benchmark avec
+l'option supplémentaire --cpu-method matrixprod pour tester l'unité qui
+gère l'affectation des processeurs aux programmes en cours d'exécution
+(cpuset).
+
+Pour voir les paramètres gérés par une unités :
+% ls /sys/fs/cgroup/<unit>
+
+Une fois que vous avez lancé le benchmark, observer avec la commande top
+ou htop qu'il s'exécute sur tous les processeurs. Si vous n'avez qu'un
+seul processeur, le test est moins intéressant. Recréez votre machine
+virtuelle avec plusieurs CPUs, ou passez à la suite.
+
+Pour changer les processeurs affectés à votre cgroup, utilisez la
+commande cgset :
+% cgset -r cpuset.cpus=<liste_cpus> test/1
+
+Vérifiez avec top ou htop que cela change les processeurs utilisés par
+le banchmark.
+
+c) cpu
+
+Nous allons maintenant tester l'unité qui gère la répartition du temps
+CPU entre les processus, nommée "cpu". Créez un deuxième slice "test/2"
+pour tester la répartition entre 2 slices.
+
+Lancez un benchmark dans chacun des slices "test/1" et "test/2". Ensuite
+observez la répartition du temps CPU alloué à chaque benchmark avec top.
+Puis nous allons changer la proportion du temps CPU alloué au groupe 2.
+% cgset cpu.shares=512 test/1
+
+Observez l'effet sur le temps CPU utilisé par chacun des benchmarks.
+
+d) memory
+
+Enfin nous allons tester l'unité qui contrôle la mémoire utilisable par
+les processus. Pour cela nous allons utiliser le benchmark avec l'option
+--malloc <nb_cpus> (à la place de l'option --cpu).
+
+Donc démarrez un benchmark dans le slice "test/1", puis modifiez la
+quantité de RAM utilisable par ce slice avec la commande cgset. Enfin
+observez la modification avec top.
+
+
+4. Namespaces
+-------------
+
+Les namespaces de Linux sont généralement complexes à manipuler en ligne
+de commande. Nous allons voir quelques tests possibles avec la commande
+"unshare".
+
+a) UTS namespace
+
+Observez la documentation de la commande unshare, et démarrez un nouveau
+processus bash dans un namespace UTS séparé. Avec la commande hostname,
+changez le nom de machine ("hostname") dans l'environnement confiné, et
+observez que cela ne change pas le hostname en dehors de ce nouveau
+processus.
+
+b) PID namespace
+
+Avec la commande suivante, nous allons créer un nouveau PID namespace :
+# unshare --fork --pid --mount-proc bash
+
+Avec la commande ps, observez les processus visibles par ce nouveau
+shell.
+
+
+5. Synthèse
+-----------
+
+Vous avez ainsi manipulé les mécanismes du noyau Linux utilisés par des
+technologies comme Docker ou LXC. Les prochains TP plus spécifiques à
+ces techno vous montreront comment elles simplifient la manipulation des
+cgroups et namespaces.
+
+
+--------

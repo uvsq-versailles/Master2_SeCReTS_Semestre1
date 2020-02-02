@@ -1,0 +1,14 @@
+policy_module(thttpd, 0.1)
+
+type thttpd_t;
+type thttpd_exec_t;
+type thttpd_root_t;
+type thttpd_default_t;
+type thttpd_bin_t;
+type thttpd_lib_t;
+type thttpd_etc_t;
+type thttpd_var_t;
+type thttpd_varwww_t;
+type thttpd_cgi_t;
+
+init_daemon_domain(thttpd_t, thttpd_exec_t)

@@ -1,0 +1,32 @@
+# Profil AppArmor pour le TP du master SeCReTS
+
+#/**/thttpd flags=(complain) {
+/**/thttpd {
+
+network inet stream,
+network inet dgram,
+network inet6 stream,
+network inet6 dgram,
+
+unix (create),
+
+capability net_bind_service,
+capability setuid,
+capability setgid,
+
+/lib{,64}/**/lib*.so* mr,
+/bin/* ixr,
+/usr/bin/* ixr,
+
+/etc/passwd r,
+/etc/localtime r,
+/etc/ld.so.cache r,
+
+/chroot/thttpd/lib{,64}/**/lib*.so* mr,
+/chroot/thttpd/** r,
+/chroot/thttpd/bin/* ixr,
+/chroot/thttpd/var/www/* ixr,
+/chroot/thttpd/var/log/* rw,
+
+}
+

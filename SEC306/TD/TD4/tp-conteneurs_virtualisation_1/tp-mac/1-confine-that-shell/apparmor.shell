@@ -1,0 +1,17 @@
+# Last Modified: Fri Dec  2 16:49:59 2016
+#include <tunables/global>
+
+/**/shell {
+  #include <abstractions/base>
+  #include <abstractions/bash>
+  #include <abstractions/nameservice>
+
+  capability setuid,
+  capability setgid,
+
+  /bin/* ixr,
+  /usr/bin/* ixr,
+
+  /root r,
+  @{HOME}/** r,
+}

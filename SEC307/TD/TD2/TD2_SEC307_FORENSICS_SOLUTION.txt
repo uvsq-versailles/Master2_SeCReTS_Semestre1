@@ -1,0 +1,35 @@
+- Analyse forensique sur un système de fichiers ou sur une partition
+
+Pour faire l'extraction d'une image disque (lecture seule), il faut faire : 
+$ sudo mount -r disk1.img ./disk1/
+Cette commande va permettre d'extraire l'image disque. 
+
+Pour démonter l'image disque on fait : 
+$ sudo umount ./disk1/
+
+Pour avoir la liste des fichiers et des dossiers (supprimés ou non): 
+$ fls -r image.disk
+r/r 5:	Document confidentiel.docx
+r/r * 7:	virus.exe
+v/v 3270387:	$MBR
+v/v 3270388:	$FAT1
+v/v 3270389:	$FAT2
+V/V 3270390:	$OrphanFiles
+
+$ icat image.disk 7 > extract.exe
+
+Pour avoir la liste des fichiers supprimés : 
+$ fls -d -p disk1.img
+
+Pour voir les inodes : 
+ils disk1.img -a 
+
+Pour extraire les fichiers que l'on veut sélectionner : 
+testdisk
+
+Pour voir le contenu de la mémoire : 
+$ blkls image.disk
+$ strings image.disk
+
+
+

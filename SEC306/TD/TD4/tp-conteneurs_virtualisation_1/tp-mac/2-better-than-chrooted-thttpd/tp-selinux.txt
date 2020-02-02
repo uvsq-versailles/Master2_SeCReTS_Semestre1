@@ -1,0 +1,139 @@
+    Master SeCReTS 2019-2020
+
+          TP SELinux
+
+=================================
+
+L'objectif est de se familiariser avec le fonctionnement de SELinux. Il
+est difficile de bien comprendre l'ensemble du fonctionnement dans le
+cadre d'un TP, mais il est possible de se faire une idée de l'apport en
+termes de sécurité, ainsi que de la difficulté de configuration.
+
+0. Consignes
+------------
+
+Les lignes commençant par '#' contiennent des commandes à lancer en
+root.
+
+Dans ce TP, nous allons étudier l'apport de SELinux en complément du
+mécanisme chroot. On suppose donc que le binaire thttpd est installé de
+façon à être lancé avec chroot, par exemple dans le dossier
+/chroot/thttpd. Si vous avez un répertoire différent, pensez à adapter
+le fichier thttpd.fc.
+
+1. Installation de SELinux
+--------------------------
+
+a) Debian
+
+Référence : https://wiki.debian.org/SELinux
+
+Tout comme AppArmor, SELinux est compilé dans le noyau de Debian version 7,
+mais il est désactivé par défaut.
+
+On commence par installer les packages nécessaires au fonctionnement :
+# aptitude -R install selinux-basics selinux-policy-default auditd \
+    selinux-policy-dev newrole
+
+Ensuite Debian fournit une commande pour configurer le système pour SELinux :
+# selinux-activate
+
+Vérifier le contenu du fichier /etc/default/grub, surtout si vous passez de
+AppArmor à SELinux :
+--------
+...
+GRUB_CMDLINE_LINUX=" selinux=1 security=selinux"
+...
+--------
+
+Ensuite vous devez redémarrer, le boot suivant sera long car SELinux doit
+configurer les contextes de sécurité de tous les fichiers existants.
+Enfin vous avez plusieurs commandes pour vérifier l'activation de SELinux :
+# sestatus
+# mount |grep selinuxfs
+# id -a
+# ps axZ
+# check-selinux-installation
+
+La dernière est spécifique à Debian.
+
+b) Ubuntu
+
+A priori, l'activation de SELinux se fait de la même façon que pour
+Debian.
+
+
+2. Création d'une configuration pour thttpd
+-------------------------------------------
+
+Téléchargez les fichiers de démarrage thttpd.fc et thttpd.te, et
+placez-les dans un dossier de travail (par exemple nommé
+selinux-thttpd).
+
+Placez-vous dans le dossier de travail, et compilez le module de
+configuration avec cette commande :
+# make -f /usr/share/selinux/devel/Makefile
+
+Si tout se passe bien, ceci produit un fichier thttpd.pp.
+Vous pouvez le charger dans la configuration SELinux globale ainsi :
+# semodule -i thttpd.pp
+
+Ensuite vous pouvez vérifier la liste des modules de configuration chargés :
+# semodule -l
+
+Enfin, avant de commencer à travailler sur l'ajout de règles, vous devez
+configurer le contexte de sécurité de thttpd (redéfini dans le fichier
+thttpd.fc) :
+# restorecon /usr/local/sbin/thttpd
+
+Ensuite vous devez démarrer le serveur thttpd et interagir avec. Pour
+démarrer thttpd dans le contexte d'un service système, on doit utiliser
+la commande suivante :
+# runcon -u system_u -r system_r -t initrc_t <ligne de commande de thttpd>
+
+Les logs produits par SELinux sont, comme pour AppArmor, dans
+/var/log/audit/audit.log.
+Vous pouvez les consulter avec cette commande :
+# grep AVC /var/log/audit/audit.log
+
+Ensuite, SELinux fournit une commande pour créer des règles de politiques à
+partir des logs :
+# audit2allow -al
+
+N'hésitez pas à vous référer à la page de man pour la signification des
+options.
+Contrairement au cas de AppArmor, ici nous n'allons pas tenter de créer une
+configuration de façon manuelle, nous allons nous baser sur la génération
+automatique.
+
+
+3. Adaptation pour les scripts CGI
+----------------------------------
+
+Comme pour le TP AppArmor, nous allons maintenant tenter d'exécuter des
+scripts CGI avec thttpd, et adapter le module de configuration SELinux
+en conséquence.
+
+Une fois que le module de politique est terminé, on peut passer la
+configuration en mode "enforcing". Attention ! Ce réglage est global pour
+SELinux, tout le système sera en mode "enforcing".
+
+Passage en mode enforcing :
+# setenforce 1
+
+Retour en mode permissif :
+# setenforce 0
+
+L'objectif est d'autoriser l'exécution du script CGI tout en interdisant
+qu'il affiche des fichiers en dehors de la racine du site web (appelée
+wwwroot dans le tp sur chroot).
+
+
+4. Conclusion
+-------------
+
+Pensez-vous qu'on obtient un niveau de confinement équivalent à celui
+fournit par AppArmor ? Lequel des 2 mécanismes est le plus simple à
+configurer ?
+
+

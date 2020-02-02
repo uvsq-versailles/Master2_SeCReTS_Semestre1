@@ -1,0 +1,103 @@
+    Master SeCReTS 2019-2020
+
+          TP AppArmor
+
+=================================
+
+L'objectif de ce TP est d'observer comment on peut confiner un programme
+setuid root à l'aide de AppArmor.
+
+
+0. Consignes
+------------
+
+Les lignes commençant par '#' contiennent des commandes à lancer en root.
+
+1. Installation de AppArmor
+---------------------------
+
+a) Sous Debian
+
+Pour le système Debian, les instructions sont tirées de
+https://wiki.debian.org/AppArmor/HowTo
+
+Installez les packages nécessaires au fonctionnement de AppArmor :
+# aptitude -R install apparmor apparmor-profiles apparmor-utils
+
+Installez également le daemon auditd qui pourra collecter les logs de
+AppArmor
+# aptitude -R install auditd
+
+Modifiez la ligne correspondante dans le fichier /etc/default/grub :
+---------
+...
+GRUB_CMDLINE_LINUX=" apparmor=1 security=apparmor"
+...
+---------
+
+Mettez à jour grub :
+# update-grub
+
+Enfin, redémarrez Debian pour activer AppArmor.
+
+b) Sous Ubuntu
+
+AppArmor est déjà installé et activé. Il peut être nécessaire
+d'installer les outils d'administration complémentaires :
+# apt install apparmor-utils auditd
+
+2. Compilation du shell setuid root
+-----------------------------------
+
+Nous allons partir du scénario où un attaquant à réussi à déposer un
+binaire sur votre machine, qui lui permet de devenir root à tout moment.
+
+% gcc -o shell shell.c
+% sudo chown root shell
+% sudo chmod u+s shell
+
+Nous disposons ainsi d'un programme qui lance un processus bash en
+utilisateur root directement. Vous pouvez le vérifier en exécutant le
+programme en simple utilisateur, puis en utilisant le programme "id".
+
+% ./shell
+# id
+uid=0(root) gid=0(root) groups=0(root)
+
+3. Confinement avec AppArmor
+----------------------------
+
+Partez du squelette fourni dans le dossier du tp, "apparmor.shell".
+
+Observez le contenu du fichier et expliquez chaque ligne présente, afin
+de vous familiariser avec la syntaxe de AppArmor. Toutes les lignes vous
+semblent-elles justifiées ?
+
+Chargez le profil avec la commande suivante :
+# apparmor_parser -a apparmor.shell
+
+Ensuite si vous modifiez le profil, vous pourrez le recharger avec :
+# apparmor_parser -r apparmor.shell
+
+Enfin vous pouvez supprimer le profil avec :
+# apparmor_parser -R apparmor.shell
+
+Testez des manipulations faisables seulement avec le compte root, et
+estimez si l'attaquant possède encore un accès root ou si vous avez
+réussi à restreindre ses possibilités.
+
+Vous pouvez vérifier ce qui a été bloqué par AppArmor avec la commande
+suivante :
+# grep AVC /var/log/audit/audit.log
+
+Le mot-clé AVC est spécifique aux logs des modules de sécurité AppArmor
+et SELinux.
+
+Pour finir, retirez du profil les lignes qui vous semblent abusives.
+Après avoir rechargé le profil, est-ce que le programme shell se lance
+encore ? En couvrant tous les programmes du système avec un profil
+strict, pensez-vous qu'il sera plus difficile pour un attaquant de
+mettre en place une backdoor root ?
+
+
+--------
