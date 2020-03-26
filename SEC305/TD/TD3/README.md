@@ -37,6 +37,16 @@ Name=enp0s3
 Address=10.1.1.1/24
 ```
 
+Si on voulait que *gateway1* soit connectée à Internet, il faudrait configurer le fichier comme cela : 
+
+```
+[Match]
+Name=enp0s3
+
+[Network]
+DHCP=ipv4
+```
+
 On édite le fichier /etc/systemd/network/enp0s8.network : 
 
 ```
