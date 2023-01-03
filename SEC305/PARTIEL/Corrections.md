@@ -8,7 +8,7 @@
 
 ### Rappelez le principe du protocole ARP. Comment feriez-vous pour mettre en évidence les attaques de ce type contre votre machine ?
 
-> ```ARP est un protocole sans état. Un attaquant peut envoyer des fausse réponse ARP sur une station pour forcer la mise à jour des caches des stations. -> le paquet ARP : @IP_victime, @MAC_pirate```
+> ARP est un protocole sans état. Un attaquant peut envoyer des fausse réponse ARP sur une station pour forcer la mise à jour des caches des stations. -> le paquet ARP : @IP_victime, @MAC_pirate
 >
 > 4 solutions :
 >
@@ -33,7 +33,7 @@
 
 ### **Format des datagrammes IP :** Quelle est la taille maximale (en octets) de a PCI *("Protocol Control Information" dans le vocabulaire OSI)* contenue dans un datagramme IP ?
 
-> ```Taille PCI : dans 99% des cas la taille est de 20 octets. Si le champs options est utilisé la taille maximum est alors de 60 octets.```
+> Taille PCI : dans 99% des cas la taille est de 20 octets. Si le champs options est utilisé la taille maximum est alors de 60 octets.
 
 ### **Découpage CIDR**
 
